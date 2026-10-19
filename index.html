@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="dark">
+<title>Planeswalker Leaderboard</title>
+<style>
+  :root {
+    --bg: #07060d;
+    --text: #f2ead8;
+    --muted: #b6a98f;
+    --gold: #e0b75a;
+    --w: #f6e7a8; --w2: #c9b25f;
+    --u: #3a9be0; --u2: #1b4f8c;
+    --b: #9a6fbf; --b2: #3a2547;
+    --r: #f0573a; --r2: #8c2416;
+    --g: #3fbf6a; --g2: #1a6034;
+  }
+  @media (prefers-color-scheme: light) { :root { color-scheme: dark; } }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; }
+  body {
+    min-height: 100vh; overflow-x: hidden;
+    font-family: "Palatino Linotype", Palatino, "Book Antiqua", Georgia, serif;
+    color: var(--text); background: var(--bg);
+    padding-block: 28px 56px; padding-inline: 16px;
+    position: relative;
+  }
+  /* ---------- magical background ---------- */
+  .sky { position: fixed; inset: 0; z-index: -1; overflow: hidden; pointer-events: none;
+    background:
+      radial-gradient(1px 1px at 12% 18%, #fff8, transparent 60%),
+      radial-gradient(1px 1px at 72% 12%, #fff9, transparent 60%),
+      radial-gradient(1.5px 1.5px at 35% 62%, #fff6, transparent 60%),
+      radial-gradient(1px 1px at 88% 44%, #fff8, transparent 60%),
+      radial-gradient(1px 1px at 52% 85%, #fff7, transparent 60%),
+      radial-gradient(1.5px 1.5px at 22% 92%, #fff6, transparent 60%),
+      radial-gradient(1px 1px at 64% 32%, #fff7, transparent 60%),
+      radial-gradient(1px 1px at 6% 55%, #fff7, transparent 60%),
+      radial-gradient(1px 1px at 94% 80%, #fff6, transparent 60%),
+      linear-gradient(180deg, #0b0818, #07060d 60%, #0a0710);
+  }
+  .orb { position: absolute; width: 46vmax; height: 46vmax; border-radius: 50%; filter: blur(70px); opacity: .28;
+    animation: drift 26s ease-in-out infinite alternate; }
+  .orb.w { background: var(--w); top: -18vmax; left: 30%; animation-delay: -4s; opacity: .14; }
+  .orb.u { background: var(--u); top: 20%; left: -20vmax; animation-delay: -9s; }
+  .orb.b { background: var(--b); bottom: -22vmax; left: 25%; animation-delay: -14s; }
+  .orb.r { background: var(--r); top: 35%; right: -22vmax; animation-delay: -2s; }
+  .orb.g { background: var(--g); bottom: -10vmax; left: -15vmax; animation-delay: -18s; opacity: .22; }
+  @keyframes drift { 0% { transform: translate(0,0) scale(1); } 50% { transform: translate(4vmax,-3vmax) scale(1.08); } 100% { transform: translate(-3vmax,4vmax) scale(.95); } }
+  .spark { position: absolute; bottom: -20px; width: 4px; height: 4px; border-radius: 50%; animation: rise linear infinite; opacity: 0; }
+  @keyframes rise { 0% { transform: translateY(0); opacity: 0; } 10% { opacity: .9; } 100% { transform: translateY(-105vh); opacity: 0; } }
+
+  .wrap { max-width: 780px; margin-inline: auto; }
+
+  /* ---------- header / color pie ---------- */
+  header { text-align: center; margin-block-end: 22px; }
+  .pie { display: flex; justify-content: center; gap: 14px; margin-block-end: 14px; flex-wrap: wrap; }
+  .mana {
+    width: 46px; height: 46px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center;
+    box-shadow: inset 0 -4px 8px rgba(0,0,0,.45), inset 0 3px 6px rgba(255,255,255,.35), 0 0 0 2px #000, 0 0 18px var(--glow);
+    animation: bob 4s ease-in-out infinite;
+  }
+  .mana svg { width: 62%; height: 62%; fill: rgba(0,0,0,.78); }
+  .mana.w { background: radial-gradient(circle at 35% 30%, #fffbe8, var(--w) 55%, var(--w2)); --glow: rgba(246,231,168,.55); animation-delay: 0s; }
+  .mana.u { background: radial-gradient(circle at 35% 30%, #bfe3ff, var(--u) 55%, var(--u2)); --glow: rgba(58,155,224,.6); animation-delay: -.8s; }
+  .mana.b { background: radial-gradient(circle at 35% 30%, #d7c4e6, var(--b) 55%, var(--b2)); --glow: rgba(154,111,191,.6); animation-delay: -1.6s; }
+  .mana.r { background: radial-gradient(circle at 35% 30%, #ffc6b5, var(--r) 55%, var(--r2)); --glow: rgba(240,87,58,.6); animation-delay: -2.4s; }
+  .mana.g { background: radial-gradient(circle at 35% 30%, #c4f2d2, var(--g) 55%, var(--g2)); --glow: rgba(63,191,106,.6); animation-delay: -3.2s; }
+  @keyframes bob { 50% { transform: translateY(-6px); } }
+  h1 {
+    margin: 0; font-size: clamp(30px, 7vw, 54px); letter-spacing: .03em; font-variant: small-caps; line-height: 1.05;
+    background: linear-gradient(90deg, var(--w), var(--u), var(--b), var(--r), var(--g), var(--w));
+    background-size: 300% 100%;
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+    animation: shimmer 12s linear infinite;
+    filter: drop-shadow(0 2px 10px rgba(0,0,0,.8));
+  }
+  @keyframes shimmer { to { background-position: 300% 0; } }
+  .typeline { margin-block-start: 8px; color: var(--muted); letter-spacing: .12em; text-transform: uppercase; font-size: 12px; }
+  .divider { display: flex; align-items: center; gap: 10px; justify-content: center; margin-block: 14px 0; }
+  .divider span { height: 2px; flex: 0 1 180px; border-radius: 2px; }
+  .divider span:first-child { background: linear-gradient(90deg, transparent, var(--u), var(--b)); }
+  .divider span:last-child  { background: linear-gradient(90deg, var(--r), var(--g), transparent); }
+  .divider i { font-style: normal; color: var(--w); font-size: 18px; text-shadow: 0 0 10px var(--w); }
+
+  /* ---------- panels styled like card frames ---------- */
+  .frame {
+    position: relative; border-radius: 16px; padding: 3px; margin-block-end: 18px;
+    background: linear-gradient(135deg, var(--w2), var(--u), var(--b), var(--r), var(--g));
+    box-shadow: 0 14px 34px rgba(0,0,0,.65);
+  }
+  .frame-inner {
+    border-radius: 13px; padding: 18px;
+    background: linear-gradient(180deg, rgba(30,24,40,.94), rgba(14,11,20,.96));
+  }
+  .frame h2 {
+    margin: 0 0 14px; padding: 7px 14px; font-size: 15px; letter-spacing: .06em; font-variant: small-caps;
+    border-radius: 999px; display: flex; align-items: center; justify-content: space-between; gap: 10px;
+    background: linear-gradient(90deg, #e8dcc0, #cdbb94); color: #1c140a; box-shadow: inset 0 0 0 1px #000, 0 2px 4px rgba(0,0,0,.5);
+  }
+  .cost { display: inline-flex; gap: 3px; }
+  .cost b { width: 16px; height: 16px; border-radius: 50%; display: inline-block; box-shadow: inset 0 -2px 3px rgba(0,0,0,.4), 0 0 0 1px #000; }
+  .cost b.w { background: var(--w); } .cost b.u { background: var(--u); } .cost b.b { background: var(--b); }
+  .cost b.r { background: var(--r); } .cost b.g { background: var(--g); }
+
+  form { display: flex; flex-wrap: wrap; gap: 10px; }
+  input[type=text] {
+    flex: 1 1 240px; min-width: 0; background: rgba(0,0,0,.45); color: var(--text);
+    border: 1px solid #5a4a6e; border-radius: 10px; padding: 12px 14px; font: inherit; font-size: 16px;
+  }
+  input[type=text]::placeholder { color: #8d7f9e; font-style: italic; }
+  input[type=text]:focus { outline: 2px solid var(--u); outline-offset: 1px; box-shadow: 0 0 16px rgba(58,155,224,.4); }
+  button { font: inherit; cursor: pointer; border-radius: 10px; color: var(--text); transition: filter .12s, transform .06s, box-shadow .2s; }
+  button:hover { filter: brightness(1.2); }
+  button:active { transform: translateY(1px); }
+  .cast {
+    border: none; padding: 12px 22px; font-weight: bold; letter-spacing: .06em; color: #fff;
+    background: linear-gradient(90deg, var(--u2), var(--b2), var(--r2)); box-shadow: inset 0 0 0 1px rgba(255,255,255,.25), 0 0 18px rgba(154,111,191,.45);
+    display: inline-flex; align-items: center; gap: 8px;
+  }
+  .cast svg { width: 18px; height: 18px; fill: #fff; }
+
+  /* ---------- leaderboard rows as mini cards ---------- */
+  ol#board { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; }
+  .row {
+    --c1: var(--u); --c2: var(--u2);
+    position: relative; border-radius: 12px; padding: 2px;
+    background: linear-gradient(135deg, var(--c1), var(--c2));
+    box-shadow: 0 6px 16px rgba(0,0,0,.5);
+  }
+  .row.w { --c1: var(--w); --c2: var(--w2); } .row.u { --c1: var(--u); --c2: var(--u2); }
+  .row.b { --c1: var(--b); --c2: var(--b2); } .row.r { --c1: var(--r); --c2: var(--r2); }
+  .row.g { --c1: var(--g); --c2: var(--g2); }
+  .row-inner {
+    display: grid; grid-template-columns: 52px 1fr auto; align-items: center; gap: 12px;
+    padding: 10px 12px; border-radius: 10px;
+    background: linear-gradient(90deg, color-mix(in srgb, var(--c2) 45%, #0e0b14), #120f18 70%);
+  }
+  .row.first { box-shadow: 0 0 0 2px #ff9a3c, 0 0 26px rgba(255,140,40,.55), 0 6px 16px rgba(0,0,0,.5); }
+  .row.first::before {
+    content: ""; position: absolute; inset: -2px; border-radius: 14px; pointer-events: none;
+    background: linear-gradient(115deg, transparent 30%, rgba(255,255,255,.35) 45%, transparent 60%);
+    background-size: 250% 100%; animation: foil 3.5s linear infinite; mix-blend-mode: overlay;
+  }
+  @keyframes foil { from { background-position: 150% 0; } to { background-position: -100% 0; } }
+  .sym {
+    width: 46px; height: 46px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+    box-shadow: inset 0 -4px 8px rgba(0,0,0,.45), inset 0 3px 6px rgba(255,255,255,.3), 0 0 0 2px #000;
+    background: radial-gradient(circle at 35% 30%, #fff9, var(--c1) 50%, var(--c2));
+  }
+  .sym svg { width: 60%; height: 60%; fill: rgba(0,0,0,.78); }
+  .who { min-width: 0; }
+  .name { font-size: 20px; font-weight: bold; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-shadow: 0 1px 2px #000; }
+  .meta { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--muted); margin-block-start: 2px; }
+  .gem { width: 12px; height: 12px; transform: rotate(45deg); border-radius: 2px; box-shadow: 0 0 0 1px #000; flex: none; }
+  .gem.mythic { background: linear-gradient(135deg, #ffd27a, #e8561c); box-shadow: 0 0 0 1px #000, 0 0 8px #ff8a2a; }
+  .gem.rare { background: linear-gradient(135deg, #fff1b3, #b88a1f); }
+  .gem.uncommon { background: linear-gradient(135deg, #f2f6fa, #7f8fa0); }
+  .gem.common { background: linear-gradient(135deg, #555, #111); box-shadow: 0 0 0 1px #888; }
+  .meta .rk { color: var(--text); font-weight: bold; }
+  .meta em { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .controls { display: flex; align-items: center; gap: 8px; }
+  .pt {
+    min-width: 64px; padding: 4px 10px; text-align: center; font-size: 26px; font-weight: bold; color: #1c140a;
+    font-variant-numeric: tabular-nums; border-radius: 8px;
+    background: linear-gradient(180deg, #efe4c6, #c9b68c); box-shadow: inset 0 0 0 1px #000, 0 0 0 2px var(--c1), 0 3px 6px rgba(0,0,0,.5);
+  }
+  .pt.bump { animation: bump .28s ease; }
+  @keyframes bump { 50% { transform: scale(1.25); } }
+  .step { width: 42px; height: 42px; padding: 0; font-size: 24px; line-height: 1; border-radius: 50%; border: none; color: #fff; font-weight: bold; }
+  .step.minus { background: radial-gradient(circle at 35% 30%, #ff9c86, var(--r) 55%, var(--r2)); box-shadow: inset 0 -3px 6px rgba(0,0,0,.4), 0 0 0 2px #000, 0 0 12px rgba(240,87,58,.5); }
+  .step.plus  { background: radial-gradient(circle at 35% 30%, #a8f0bf, var(--g) 55%, var(--g2)); box-shadow: inset 0 -3px 6px rgba(0,0,0,.4), 0 0 0 2px #000, 0 0 12px rgba(63,191,106,.5); }
+  .remove { background: none; border: none; color: var(--muted); padding: 6px; font-size: 18px; }
+  .remove:hover { color: var(--r); }
+  .empty { text-align: center; color: var(--muted); font-style: italic; padding: 24px 8px; }
+  .empty svg { display: block; margin: 0 auto 10px; width: 60px; height: 84px; }
+
+  .flavor { text-align: center; font-style: italic; color: #cfc3a8; margin-block: 6px 18px; padding-inline: 20px; }
+  .flavor::before, .flavor::after { content: "\2726"; color: var(--b); margin-inline: 8px; font-style: normal; }
+  .footer-actions { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; }
+  .ghost { padding: 10px 16px; background: rgba(255,255,255,.04); border: 1px solid #4a3e5a; }
+  .ghost.danger:hover { border-color: var(--r); color: #ffb3a5; }
+  .note { text-align: center; color: var(--muted); font-size: 12px; margin-block-start: 12px; }
+
+  @media (max-width: 540px) {
+    .row-inner { grid-template-columns: 44px 1fr; }
+    .controls { grid-column: 1 / -1; justify-content: flex-end; }
+    .sym { width: 40px; height: 40px; }
+    .mana { width: 38px; height: 38px; }
+  }
+  @media (prefers-reduced-motion: reduce) { *, *::before { animation: none !important; } }
+</style>
+</head>
+<body>
+<!-- mana symbol library -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <symbol id="m-w" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4.6"/><path d="M12 1l1.6 5h-3.2zM12 23l-1.6-5h3.2zM1 12l5-1.6v3.2zM23 12l-5 1.6v-3.2zM4.2 4.2l4.7 2.4-2.3 2.3zM19.8 19.8l-4.7-2.4 2.3-2.3zM19.8 4.2l-2.4 4.7-2.3-2.3zM4.2 19.8l2.4-4.7 2.3 2.3z"/></symbol>
+    <symbol id="m-u" viewBox="0 0 24 24"><path d="M12 1.5C12 1.5 4.5 10.2 4.5 15a7.5 7.5 0 0 0 15 0C19.5 10.2 12 1.5 12 1.5zM9 14.5c0 2 1 3.6 2.8 4.2-.4.6-2.8 0-3.9-1.7S7.2 13 8.3 11.6c.4 1 .7 1.8.7 2.9z"/></symbol>
+    <symbol id="m-b" viewBox="0 0 24 24"><path d="M12 2C6.9 2 3.5 5.6 3.5 10c0 2.7 1.3 4.6 3 5.7V19c0 1 .8 1.8 1.8 1.8h.7v-2h1.6v2h2.8v-2H15v2h.7c1 0 1.8-.8 1.8-1.8v-3.3c1.7-1.1 3-3 3-5.7C20.5 5.6 17.1 2 12 2zM8.6 13.6a2.2 2.2 0 1 1 0-4.4 2.2 2.2 0 0 1 0 4.4zm6.8 0a2.2 2.2 0 1 1 0-4.4 2.2 2.2 0 0 1 0 4.4zM12 16.6l-1.3-2.4h2.6z"/></symbol>
+    <symbol id="m-r" viewBox="0 0 24 24"><path d="M12.6 1c.9 3.6-1.3 5.6-3.1 7.6-1.6 1.8-3.4 3.8-3.4 7a6 6 0 0 0 12 0c0-2.6-1.3-4.6-2.4-5.8.1 1.6-.4 3-1.6 3.6.6-3.4-.4-7.2-1.5-12.4zM12 22a3.3 3.3 0 0 1-3.3-3.3c0-1.9 1.4-2.8 2.4-4.4.3 1.3 1 2 1.8 2.2-.2-1 .2-1.9.7-2.4.7.9 1.7 2.4 1.7 4.6A3.3 3.3 0 0 1 12 22z"/></symbol>
+    <symbol id="m-g" viewBox="0 0 24 24"><path d="M12 1.5c-2.3 0-4 1.6-4.3 3.6C5.5 5.5 4 7.3 4 9.5c0 1.1.4 2.1 1 2.9-.6.7-1 1.6-1 2.6 0 2.2 1.8 4 4 4h2.6V23h2.8v-4H16c2.2 0 4-1.8 4-4 0-1-.4-1.9-1-2.6.6-.8 1-1.8 1-2.9 0-2.2-1.5-4-3.7-4.4C16 3.1 14.3 1.5 12 1.5z"/></symbol>
+    <symbol id="m-tap" viewBox="0 0 24 24"><path d="M6 4h9.5a5.5 5.5 0 0 1 5.5 5.5V14h2.5L19.5 19 15.5 14H18V9.5A2.5 2.5 0 0 0 15.5 7H6z"/><path d="M2 10h11v3H2z"/></symbol>
+  </defs>
+</svg>
+
+<div class="sky" aria-hidden="true">
+  <div class="orb w"></div><div class="orb u"></div><div class="orb b"></div><div class="orb r"></div><div class="orb g"></div>
+</div>
+
+<div class="wrap">
+  <header>
+    <div class="pie" aria-hidden="true">
+      <span class="mana w"><svg><use href="#m-w"/></svg></span>
+      <span class="mana u"><svg><use href="#m-u"/></svg></span>
+      <span class="mana b"><svg><use href="#m-b"/></svg></span>
+      <span class="mana r"><svg><use href="#m-r"/></svg></span>
+      <span class="mana g"><svg><use href="#m-g"/></svg></span>
+    </div>
+    <h1>Planeswalker Leaderboard</h1>
+    <div class="typeline">Legendary Enchantment &mdash; Scoreboard</div>
+    <div class="divider" aria-hidden="true"><span></span><i>&#10022;</i><span></span></div>
+  </header>
+
+  <section class="frame"><div class="frame-inner">
+    <h2>Summon a Planeswalker <span class="cost" aria-hidden="true"><b class="w"></b><b class="u"></b><b class="b"></b><b class="r"></b><b class="g"></b></span></h2>
+    <form id="addForm" autocomplete="off">
+      <input type="text" id="nameInput" maxlength="40" placeholder="Name your planeswalker..." aria-label="Player name" required>
+      <button type="submit" class="cast"><svg aria-hidden="true"><use href="#m-tap"/></svg>Cast</button>
+    </form>
+  </div></section>
+
+  <p class="flavor" id="flavor"></p>
+
+  <section class="frame"><div class="frame-inner">
+    <h2>The Battlefield</h2>
+    <ol id="board"></ol>
+  </div></section>
+
+  <div class="footer-actions">
+    <button type="button" class="ghost" id="resetBtn">&#8634; Untap &amp; Reset Scores</button>
+    <button type="button" class="ghost danger" id="clearBtn">&#10006; Board Wipe</button>
+  </div>
+  <p class="note">Saved in this browser only &mdash; nothing is sent anywhere.</p>
+</div>
+
+<script>
+(function () {
+  "use strict";
+  var KEY = "mtg-leaderboard-v1";
+  var CYCLE = ["w", "u", "b", "r", "g"];
+  var TITLES = [
+    [20, "Legendary Planeswalker"], [15, "Archmage"], [10, "Battle Mage"],
+    [5, "Spellslinger"], [1, "Apprentice"], [0, "Untapped Novice"], [-Infinity, "Sent to the Graveyard"]
+  ];
+  var FLAVOR = [
+    "Every legend begins with a single land drop.",
+    "The top of the stack is a lonely place.",
+    "Shuffle up. Draw seven. Make history.",
+    "Mana flows to those who seize it.",
+    "Today's topdeck is tomorrow's tale.",
+    "In the end, only the scoreboard remembers."
+  ];
+
+  var players = load();
+  var lastBumped = null;
+  var board = document.getElementById("board");
+  var form = document.getElementById("addForm");
+  var nameInput = document.getElementById("nameInput");
+
+  document.getElementById("flavor").textContent = FLAVOR[Math.floor(Math.random() * FLAVOR.length)];
+
+  function load() {
+    var d;
+    try { d = JSON.parse(localStorage.getItem(KEY)); } catch (e) { d = null; }
+    if (!Array.isArray(d)) return [];
+    d.forEach(function (p, i) { if (CYCLE.indexOf(p.color) < 0) p.color = CYCLE[i % 5]; });
+    return d;
+  }
+  function save() { try { localStorage.setItem(KEY, JSON.stringify(players)); } catch (e) {} }
+  function titleFor(s) { for (var i = 0; i < TITLES.length; i++) if (s >= TITLES[i][0]) return TITLES[i][1]; return ""; }
+  function rarity(rank, score) { if (score <= 0) return "common"; return rank === 1 ? "mythic" : rank === 2 ? "rare" : rank === 3 ? "uncommon" : "common"; }
+  function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
+  function nextColor() {
+    var counts = {}; CYCLE.forEach(function (c) { counts[c] = 0; });
+    players.forEach(function (p) { counts[p.color] = (counts[p.color] || 0) + 1; });
+    var min = Math.min.apply(null, CYCLE.map(function (c) { return counts[c]; }));
+    var opts = CYCLE.filter(function (c) { return counts[c] === min; });
+    return opts[Math.floor(Math.random() * opts.length)];
+  }
+  var SVGNS = "http://www.w3.org/2000/svg";
+  function icon(id) {
+    var s = document.createElementNS(SVGNS, "svg"); s.setAttribute("aria-hidden", "true");
+    var u = document.createElementNS(SVGNS, "use"); u.setAttribute("href", "#" + id); s.appendChild(u); return s;
+  }
+  function el(tag, cls, text) {
+    var n = document.createElement(tag);
+    if (cls) n.className = cls;
+    if (text !== undefined) n.textContent = text;
+    return n;
+  }
+  function btn(cls, text, id, act, label) {
+    var b = el("button", cls, text); b.type = "button"; b.dataset.id = id; b.dataset.act = act;
+    b.setAttribute("aria-label", label); b.title = label; return b;
+  }
+
+  function render() {
+    board.textContent = "";
+    if (!players.length) {
+      var e = el("li", "empty");
+      e.innerHTML = '<svg viewBox="0 0 60 84" aria-hidden="true"><rect x="2" y="2" width="56" height="80" rx="6" fill="#3b2a1a" stroke="#000" stroke-width="2"/><ellipse cx="30" cy="42" rx="22" ry="32" fill="#6b4a2a" stroke="#c9a15a" stroke-width="2"/><circle cx="30" cy="22" r="4" fill="#f6e7a8"/><circle cx="46" cy="36" r="4" fill="#3a9be0"/><circle cx="40" cy="58" r="4" fill="#9a6fbf"/><circle cx="20" cy="58" r="4" fill="#f0573a"/><circle cx="14" cy="36" r="4" fill="#3fbf6a"/></svg>';
+      e.appendChild(document.createTextNode("Your library awaits. Summon a planeswalker above."));
+      board.appendChild(e);
+      return;
+    }
+    var sorted = players.slice().sort(function (a, b) { return b.score - a.score || a.added - b.added; });
+    var rank = 0, prev = null;
+    sorted.forEach(function (p, i) {
+      if (p.score !== prev) { rank = i + 1; prev = p.score; }
+      var li = el("li", "row " + p.color + (rank === 1 && p.score > 0 ? " first" : ""));
+      var inner = el("div", "row-inner");
+
+      var sym = el("div", "sym"); sym.appendChild(icon("m-" + p.color)); inner.appendChild(sym);
+
+      var who = el("div", "who");
+      who.appendChild(el("div", "name", (rank === 1 && p.score > 0 ? "\u265B " : "") + p.name));
+      var meta = el("div", "meta");
+      meta.appendChild(el("span", "gem " + rarity(rank, p.score)));
+      meta.appendChild(el("span", "rk", "#" + rank));
+      meta.appendChild(el("em", "", titleFor(p.score)));
+      who.appendChild(meta);
+      inner.appendChild(who);
+
+      var c = el("div", "controls");
+      c.appendChild(btn("step minus", "\u2212", p.id, "dec", "Subtract a point from " + p.name));
+      c.appendChild(el("div", "pt" + (lastBumped === p.id ? " bump" : ""), String(p.score)));
+      c.appendChild(btn("step plus", "+", p.id, "inc", "Add a point to " + p.name));
+      c.appendChild(btn("remove", "\u2715", p.id, "del", "Exile " + p.name));
+      inner.appendChild(c);
+
+      li.appendChild(inner);
+      board.appendChild(li);
+    });
+    lastBumped = null;
+  }
+
+  form.addEventListener("submit", function (e) {
+    e.preventDefault();
+    var name = nameInput.value.trim();
+    if (!name) return;
+    if (players.some(function (p) { return p.name.toLowerCase() === name.toLowerCase(); })) {
+      alert(name + " is already on the battlefield."); return;
+    }
+    players.push({ id: uid(), name: name, color: nextColor(), score: 0, added: Date.now() });
+    save(); render();
+    nameInput.value = ""; nameInput.focus();
+  });
+
+  board.addEventListener("click", function (e) {
+    var b = e.target.closest("button[data-act]");
+    if (!b) return;
+    var p = players.find(function (x) { return x.id === b.dataset.id; });
+    if (!p) return;
+    if (b.dataset.act === "inc") { p.score++; lastBumped = p.id; burst(b, p.color); }
+    else if (b.dataset.act === "dec") { p.score--; lastBumped = p.id; }
+    else if (b.dataset.act === "del") {
+      if (!confirm("Exile " + p.name + " from the leaderboard?")) return;
+      players = players.filter(function (x) { return x.id !== p.id; });
+    }
+    save(); render();
+  });
+
+  document.getElementById("resetBtn").addEventListener("click", function () {
+    if (!players.length || !confirm("Untap everyone and reset all scores to 0?")) return;
+    players.forEach(function (p) { p.score = 0; }); save(); render();
+  });
+  document.getElementById("clearBtn").addEventListener("click", function () {
+    if (!players.length || !confirm("Board wipe! Remove everyone from the leaderboard?")) return;
+    players = []; save(); render();
+  });
+
+  /* little mana sparks: ambient + on +1 */
+  var HEX = { w: "#f6e7a8", u: "#3a9be0", b: "#b48ad6", r: "#f0573a", g: "#3fbf6a" };
+  var sky = document.querySelector(".sky");
+  var reduce = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  if (!reduce) {
+    for (var i = 0; i < 26; i++) {
+      var s = el("span", "spark"); var col = HEX[CYCLE[i % 5]];
+      s.style.left = (Math.random() * 100) + "%";
+      s.style.background = col; s.style.boxShadow = "0 0 8px 2px " + col;
+      s.style.animationDuration = (12 + Math.random() * 16) + "s";
+      s.style.animationDelay = (-Math.random() * 28) + "s";
+      sky.appendChild(s);
+    }
+  }
+  function burst(target, color) {
+    if (reduce) return;
+    var r = target.getBoundingClientRect();
+    for (var k = 0; k < 10; k++) {
+      var d = el("span");
+      var ang = Math.random() * Math.PI * 2, dist = 30 + Math.random() * 40;
+      d.style.cssText = "position:fixed;z-index:10;pointer-events:none;width:6px;height:6px;border-radius:50%;" +
+        "left:" + (r.left + r.width / 2) + "px;top:" + (r.top + r.height / 2) + "px;background:" + HEX[color] +
+        ";box-shadow:0 0 8px " + HEX[color] + ";transition:transform .6s ease-out,opacity .6s ease-out;";
+      document.body.appendChild(d);
+      (function (n, a, ds) {
+        requestAnimationFrame(function () {
+          n.style.transform = "translate(" + Math.cos(a) * ds + "px," + Math.sin(a) * ds + "px)"; n.style.opacity = "0";
+        });
+        setTimeout(function () { n.remove(); }, 650);
+      })(d, ang, dist);
+    }
+  }
+
+  render();
+})();
+</script>
+</body>
+</html>
